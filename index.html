@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ساعة المحترف Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00d2ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2088/2088617.png">
+
+    <style>
+        :root {
+            --primary-color: #00d2ff;
+            --bg-color: #0f1011;
+            --clock-bg: #1e1e1e;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* لوحة التحكم علوية */
+        .controls {
+            position: absolute;
+            top: 20px;
+            background: rgba(37, 37, 37, 0.8);
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: flex;
+            gap: 20px;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+        }
+
+        .control-group { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
+        input[type="color"] { border: none; width: 25px; height: 25px; cursor: pointer; background: none; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        /* الساعة التناظرية المحدثة */
+        .analog-clock {
+            width: 280px;
+            height: 280px;
+            background: var(--clock-bg);
+            border: 10px solid #282828;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .analog-clock::after { /* النقطة المركزية */
+            content: '';
+            position: absolute;
+            width: 12px; height: 12px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            border-radius: 10px;
+            transform: translateX(-50%);
+            transition: transform 0.05s cubic-bezier(0.1, 2.7, 0.58, 1);
+        }
+
+        .hour { width: 8px; height: 70px; background: white; z-index: 3; }
+        .minute { width: 5px; height: 100px; background: #ddd; z-index: 2; }
+        .second { width: 2px; height: 120px; background: var(--primary-color); z-index: 1; }
+
+        /* الأرقام */
+        .num { position: absolute; width: 100%; height: 100%; text-align: center; padding: 15px; font-weight: bold; color: #555; font-size: 1.2rem; }
+
+        /* القسم الرقمي */
+        .digital-info { text-align: center; }
+        .date-box { font-size: 1.2rem; color: var(--primary-color); margin-bottom: 5px; }
+        .digital-clock { font-size: 3.5rem; font-weight: 800; font-family: 'Courier New', monospace; text-shadow: 0 0 10px rgba(0,210,255,0.3); }
+
+        @media (max-width: 500px) {
+            .analog-clock { width: 220px; height: 220px; }
+            .digital-clock { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>الثيم</label>
+            <input type="color" id="primaryColorPicker" value="#00d2ff">
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="analog-clock" id="analogClock">
+            <div class="num" style="transform: rotate(0deg)">12</div>
+            <div class="num" style="transform: rotate(90deg)">3</div>
+            <div class="num" style="transform: rotate(180deg)">6</div>
+            <div class="num" style="transform: rotate(270deg)">9</div>
+            
+            <div class="hand hour" id="hourHand"></div>
+            <div class="hand minute" id="minHand"></div>
+            <div class="hand second" id="secHand"></div>
+        </div>
+
+        <div class="digital-info">
+            <div class="date-box" id="fullDate">...</div>
+            <div class="digital-clock" id="digitalClock">00:00:00</div>
+        </div>
+    </div>
+
+    <script>
+        // تسجيل الـ Service Worker للعمل أوفلاين
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+
+        function updateClock() {
+            const now = new Date();
+            
+            // الوقت الرقمي والتاريخ
+            document.getElementById('digitalClock').innerText = now.toLocaleTimeString('en-GB');
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('fullDate').innerText = now.toLocaleDateString('ar-SA', options);
+
+            // حسابات العقارب بدقة متناهية (الحركة المستمرة)
+            const ms = now.getMilliseconds() / 1000;
+            const s = now.getSeconds();
+            const m = now.getMinutes();
+            const h = now.getHours();
+
+            const secDeg = (s + ms) * 6;
+            const minDeg = (m * 6) + (s * 0.1);
+            const hourDeg = (h % 12 * 30) + (m * 0.5);
+
+            document.getElementById('secHand').style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+            document.getElementById('minHand').style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+            document.getElementById('hourHand').style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+
+            requestAnimationFrame(updateClock);
+        }
+
+        document.getElementById('primaryColorPicker').addEventListener('input', (e) => {
+            document.documentElement.style.setProperty('--primary-color', e.target.value);
+        });
+
+        updateClock();
+    </script>
+</body>
+</html>

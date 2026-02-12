@@ -1,0 +1,15 @@
+{
+  "name": "ساعة المحترف برو",
+  "short_name": "ساعتي",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f1011",
+  "theme_color": "#00d2ff",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2088/2088617.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
